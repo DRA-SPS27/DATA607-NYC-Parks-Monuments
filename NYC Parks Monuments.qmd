@@ -1,0 +1,16 @@
+---
+title: "NYC Parks Monuments"
+author: "Denise Atherley"
+format: html
+editor: visual
+---
+
+# Approach
+
+## Introduction to different monuments in NYC public parks
+
+I was looking for a dataset that was relevant to me. As a New Yorker who enjoys spending time in city parks, I often wondered about the many monuments that surround the area. I was curious if there were any interesting historical facts about how these monuments came to be. I was able to find a dataset on the NYC Open Data website that offered a recent list of monuments maintained by the NYC Parks Department.
+
+## Comparing monuments in NYC public parks
+
+Source: https://data.cityofnewyork.us/Recreation/NYC-Parks-Monuments/6rrm-vxj9/about_data
