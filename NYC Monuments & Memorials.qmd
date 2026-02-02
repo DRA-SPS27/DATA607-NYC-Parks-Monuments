@@ -1,0 +1,211 @@
+---
+title: "NYC Parks Monuments"
+author: "Denise Atherley"
+format: html
+editor: visual
+---
+
+# Approach
+
+## Introduction to different NYC monuments
+
+I was looking for a dataset that was relevant to me. As a New Yorker who enjoys spending time in city parks, I often wondered about the many monuments that surround the area. I was curious if there were any interesting historical facts about how these monuments came to be.
+
+I was able to find a dataset on the NYC Open Data website that offered a recent list of monuments maintained by the NYC Parks Department.
+
+Source: <https://data.cityofnewyork.us/Recreation/NYC-Parks-Monuments/6rrm-vxj9/about_data>
+
+A secondary dataset is presented, as a result of a Google Gemini prompt, that is related to my original dataset but is more compelling to me and has more.
+
+Source: <https://catalog.data.gov/dataset/public-design-commission-outdoor-public-art-inventory>
+
+### Code deliverable
+
+-   For code, I'll create a "base R" program that fulfills the requirement deliverables to read data into, filter, subset and then display a dataframe.
+
+-   I'll create a beachhead, where I'll pull in the .csv file from the public folder I created and display the contents out using the gt() command.
+
+### Iterate with LLM to expand deliverable to:
+
+-   Convert the code to tidyverse
+-   Look at the choices for Artwork Type 1 and make a decision on collapsing option with multiple selections to one broader catagory
+
+### Nice to haves:
+
+-   Compare monuments installed before 1964 and after 1964
+-   Ask and answer a question about different monument types over time.
+-   Get the longitudes and latitudes of monuments of a specifc Artwork Type and showing them on google maps.
+-   Show and animation of where monuments are dynamically overlaid over time
+
+```{r}
+library(tidyverse)
+
+```
+
+── Attaching core tidyverse packages ────────────────────── tidyverse 2.0.0 ── ✔ dplyr 1.1.4 ✔ readr 2.1.6 ✔ forcats 1.0.1 ✔ stringr 1.6.0 ✔ ggplot2 4.0.1 ✔ tibble 3.3.1 ✔ lubridate 1.9.4 ✔ tidyr 1.3.2 ✔ purrr 1.2.1\
+── Conflicts ──────────────────────────────────────── tidyverse_conflicts() ── ✖ dplyr::filter() masks stats::filter() ✖ dplyr::lag() masks stats::lag() ℹ Use the conflicted package to force all conflicts to become errors
+
+```{r}
+library(gt)
+
+```
+
+Beachhead - verify that I can read data into dataframe, and dump out contents Note: I'm using the raw version of https://raw.githubusercontent.com/DRA-SPS27/DATA607-NYC-Parks-Monuments/refs/heads/main/Public_Design_Commission_Outdoor_Public_Art_Inventory.csv
+
+```{r}
+#| echo: true
+url<-"https://raw.githubusercontent.com/DRA-SPS27/DATA607-NYC-Parks-Monuments/refs/heads/main/Public_Design_Commission_Outdoor_Public_Art_Inventory.csv"
+
+df<-read_csv(url)
+
+glimpse(df)
+  
+```
+
+```{r}
+#| echo: true
+df|>
+  gt()
+
+```
+
+### Subset of data:
+
+I'll create a subset of the data, looking at Date Created, Artwork Type 1, Artwork Type 2, Material, and borough.
+
+```{r}
+df1<-df[1:5,c(22,26,27,28,34)]
+
+df1|>
+  gt()
+```
+
+### Tidyverse version:
+
+I asked ChatGPT to convert to tidyverse syntax - transcript provided separately.
+
+```{r}
+#| echo: true
+library(dplyr)
+
+df1_tidy <- df |>
+  select(
+    `Date Created`,
+    `Artwork Type1`,
+    `Artwork Type2`,
+    Material,
+    Borough
+  ) |>
+  slice_head(n = 5)
+
+df1_tidy |>
+  gt()
+```
+
+## Exploratory Data Analysis:
+
+I then wanted to perform an exploratory data analysis on the Artwork Type1 column. I used ChatGPT to generate a code in tinyverse syntax to show the Artwork Type1 column in a table of values with counts and percentages.
+
+```{r}
+#| echo: true
+library(dplyr)
+library(gt)
+library(scales)
+
+artwork_type1_summary <- df |>
+  filter(!is.na(`Artwork Type1`)) |>
+  count(`Artwork Type1`, name = "count") |>
+  mutate(
+    percent = count / sum(count)
+  ) |>
+  arrange(desc(count))
+
+artwork_type1_summary |>
+  gt() |>
+  fmt_number(
+    columns = count,
+    decimals = 0
+  ) |>
+  fmt_percent(
+    columns = percent,
+    decimals = 1
+  ) |>
+  cols_label(
+    `Artwork Type1` = "Artwork Type 1",
+    count = "Count",
+    percent = "Percent of Total"
+  ) |>
+  tab_header(
+    title = "Distribution of Artwork Type 1",
+    subtitle = "NYC Parks Monuments (Full Dataset)"
+  )
+
+```
+
+### Separate multiple values
+
+The Artwork Type 1 Column has several records that have multiple values, separated by a comma, and I'd like to consolidate them into broader catagories for easier review. Each artwork type gets its own row.
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+df_artwork_long <- df |>
+  filter(!is.na(`Artwork Type1`)) |>
+  separate_rows(`Artwork Type1`, sep = ",") |>
+  mutate(
+    `Artwork Type 1` = str_trim(`Artwork Type1`)
+  )
+
+```
+
+### Consolidate into broader catagories
+
+```{r}
+df_artwork_rolled <- df_artwork_long |>
+  mutate(
+    artwork_category = case_when(
+      str_detect(`Artwork Type1`, regex("statue|sculpture", ignore_case = TRUE)) ~ "Sculpture / Statue",
+      str_detect(`Artwork Type1`, regex("monument|memorial", ignore_case = TRUE)) ~ "Monument / Memorial",
+      str_detect(`Artwork Type1`, regex("plaque", ignore_case = TRUE)) ~ "Plaque",
+      str_detect(`Artwork Type1`, regex("fountain", ignore_case = TRUE)) ~ "Fountain",
+      str_detect(`Artwork Type1`, regex("mural", ignore_case = TRUE)) ~ "Mural",
+      TRUE ~ "Other"
+    )
+  )
+
+```
+
+### Summarize counts and percentages
+
+```{r}
+artwork_category_summary <- df_artwork_rolled |>
+  count(artwork_category, name = "count") |>
+  mutate(
+    percent = count / sum(count)
+  ) |>
+  arrange(desc(count))
+
+```
+
+### Presentation-ready table
+
+```{r}
+library(gt)
+
+artwork_category_summary |>
+  gt() |>
+  fmt_number(count, decimals = 0) |>
+  fmt_percent(percent, decimals = 1) |>
+  cols_label(
+    artwork_category = "Artwork Category",
+    count = "Count",
+    percent = "Percent of Total"
+  ) |>
+  tab_header(
+    title = "Artwork Type 1 Rolled Up into Main Categories",
+    subtitle = "Multiple values consolidated into broader groups"
+  )
+
+```
